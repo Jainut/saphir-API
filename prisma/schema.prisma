@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,24 +11,25 @@ datasource db {
 }
 
 model Produto {
-  id    Int    @id @default(autoincrement())
-  nome  String
+  id           Int           @id @default(autoincrement())
+  nome         String
   itensEstoque ItemEstoque[]
 }
 
 model Minerio {
-  id    Int    @id @default(autoincrement())
-  nome  String
+  id           Int           @id @default(autoincrement())
+  nome         String
   itensEstoque ItemEstoque[]
+  extracoes    Extracao[]
 }
 
 model Estoque {
-  id    Int @id @default(autoincrement())
+  id    Int           @id @default(autoincrement())
   itens ItemEstoque[]
 }
 
 model ItemEstoque {
-  id         Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   quantidade Int
 
   produtoId  Int?
@@ -41,7 +39,7 @@ model ItemEstoque {
   minerio    Minerio? @relation(fields: [minerioId], references: [id])
 
   estoqueId  Int
-  estoque    Estoque @relation(fields: [estoqueId], references: [id])
+  estoque    Estoque  @relation(fields: [estoqueId], references: [id])
 }
 
 model Compra {
@@ -51,13 +49,21 @@ model Compra {
 }
 
 model Extracao {
-  id         Int @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   minerioId  Int
+  minerio    Minerio  @relation(fields: [minerioId], references: [id])
   quantidade Int
+  criadoEm   DateTime @default(now())
 }
 
 model Venda {
   id         Int @id @default(autoincrement())
   minerioId  Int
   quantidade Int
+}
+
+model Usuario {
+  id        Int    @id @default(autoincrement())
+  usuario   String @unique
+  senhaHash String
 }

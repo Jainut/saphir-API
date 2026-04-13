@@ -1,5 +1,6 @@
 import express from 'express'
 import { PrismaClient } from '@prisma/client'
+import crypto from 'crypto'
 
 const prisma = new PrismaClient()
 const router = express.Router()
@@ -208,6 +209,23 @@ router.post('/registrarVenda', async (req, res) => {
     }
 })
 
+router.get('/listarExtracoes', async (req, res) => {
+    try {
+        const extracoes = await prisma.extracao.findMany({
+            include: {
+                minerio: true
+            },
+            orderBy: {
+                id: 'desc'
+            }
+        })
+        res.json(extracoes)
+    } catch (err) {
+        console.error(err)
+        return res.status(500).json({ message: "Erro ao listar extrações" })
+    }
+})
+
 router.get('/listarEstoque', async (req, res) => {
     const estoque = await prisma.itemEstoque.findMany({
         include: {
@@ -217,6 +235,66 @@ router.get('/listarEstoque', async (req, res) => {
     })
 
     res.json(estoque)
+})
+
+router.post('/registrarUsuario', async (req, res) => {
+    const { usuario, senha } = req.body
+
+    try {
+        if (!usuario || !senha) {
+            return res.status(400).json({ message: "Usuário e senha são obrigatórios" })
+        }
+
+        const existe = await prisma.usuario.findUnique({ where: { usuario } })
+        if (existe) {
+            return res.status(409).json({ message: "Usuário já existe" })
+        }
+
+        const senhaHash = crypto.createHash('sha256').update(senha).digest('hex')
+
+        await prisma.usuario.create({
+            data: { usuario, senhaHash }
+        })
+
+        return res.status(201).json({ message: "Usuário registrado" })
+
+    } catch (err) {
+        console.error(err)
+        return res.status(500).json({ message: "Erro no servidor" })
+    }
+})
+
+router.post('/login', async (req, res) => {
+    const { usuario, senha } = req.body
+
+    try {
+        if (!usuario || !senha) {
+            return res.status(400).json({ message: "Preencha todos os campos" })
+        }
+
+        const user = await prisma.usuario.findUnique({ where: { usuario } })
+
+        if (!user) {
+            return res.status(401).json({ message: "Usuário ou senha inválidos" })
+        }
+
+        const senhaHash = crypto.createHash('sha256').update(senha).digest('hex')
+
+        if (senhaHash !== user.senhaHash) {
+            return res.status(401).json({ message: "Usuário ou senha inválidos" })
+        }
+
+        const token = crypto
+            .createHash('sha256')
+            .update(`${user.id}${user.usuario}${Date.now()}`)
+            .digest('hex')
+
+        return res.status(200).json({ token, usuario: user.usuario })
+
+    } catch (err) {
+        console.error(err)
+        return res.status(500).json({ message: "Erro no servidor" })
+    }
 })
 
 export default router
